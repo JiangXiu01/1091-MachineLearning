@@ -20,7 +20,7 @@ def ml_loop():
     # === Here is the execution order of the loop === #
 
     LastTimeBallCoordinate = [0,0]
-    aid = 0
+    result = 0
     m = 1
     comm.ml_ready()
     BallDirection = ''
@@ -52,12 +52,12 @@ def ml_loop():
 
         m = (BallCoordinate[1] - LastTimeBallCoordinate[1]) / (BallCoordinate[0] - LastTimeBallCoordinate[0])
         #print(BallCoordinate[1], ' - ', LastTimeBallCoordinate[1], '  ',BallCoordinate[0], ' ',LastTimeBallCoordinate[0])
-        aid = BallCoordinate[0] + ((395 - BallCoordinate[1]) / m)
-        if aid < 0:
-            aid = -aid
-        elif aid > 200:
-            aid = aid - 200
-            aid = 200 - aid
+        result = BallCoordinate[0] + ((395 - BallCoordinate[1]) / m)
+        if result < 0:
+            result = -result
+        elif result > 200:
+            result = result - 200
+            result = 200 - result
 
         if BallUpAndDown == 'Down' and m == 1:
             BallRebound = '↘'
@@ -69,13 +69,13 @@ def ml_loop():
             BallRebound = '↖'
         else:
             BallRebound = 'Collision'
-        print('ballY=> ', BallCoordinate[1],'BallX=> ', BallCoordinate[0], '  PlatformX=> ', PlatformX, '  aid=> ', aid,'  BallRebound=> ', BallRebound)
+        print('ballY=> ', BallCoordinate[1],'BallX=> ', BallCoordinate[0], '  PlatformX=> ', PlatformX, '  result=> ', result,'  BallRebound=> ', BallRebound)
         '''
         #4關卡:
         ######################################################################
-        if PlatformX > aid and BallUpAndDown == 'Down' and BallCoordinate[1] < 200:
+        if PlatformX > result and BallUpAndDown == 'Down' and BallCoordinate[1] < 200:
             comm.send_instruction(scene_info.frame, PlatformAction.MOVE_LEFT)
-        if PlatformX < aid and BallUpAndDown == 'Down'and BallCoordinate[1] < 200:
+        if PlatformX < result and BallUpAndDown == 'Down'and BallCoordinate[1] < 200:
             comm.send_instruction(scene_info.frame, PlatformAction.MOVE_RIGHT)
 
         if BallRebound == '↗' and BallUpAndDown == 'Up' and 280 > BallCoordinate[1] > 200:
@@ -102,9 +102,9 @@ def ml_loop():
         
         #1~3,5關卡:
         ######################################################################
-        if PlatformX > aid and BallUpAndDown == 'Down':
+        if PlatformX > result and BallUpAndDown == 'Down':
             comm.send_instruction(scene_info.frame, PlatformAction.MOVE_LEFT)
-        if PlatformX < aid and BallUpAndDown == 'Down':
+        if PlatformX < result and BallUpAndDown == 'Down':
             comm.send_instruction(scene_info.frame, PlatformAction.MOVE_RIGHT)
         if BallUpAndDown == 'Up' and PlatformX < 100 and BallCoordinate[1] < 200:
             comm.send_instruction(scene_info.frame, PlatformAction.MOVE_RIGHT)
