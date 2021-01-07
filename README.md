@@ -1,5 +1,13 @@
-# 1091-MachineLearning learning class assignment
-#高雄科技大學(第一校區) 電子工程系 0652001 江承修
+##1091-MachineLearning learning class assignment
+**高雄科技大學(第一校區) 電子工程系 0652001 江承修**
+
+指導老師：陳朝烈 教授
+
+組員名單：
+電子工程系4甲 0652001 江承修
+電子工程系4甲 0652013 蕭宇謙
+電子工程系4甲 0652068 潘名洲
+
 
 原始程式Git：  
     - https://github.com/LanKuDot/MLGame?fbclid=IwAR2TVx1-ZabCglfJ3fGrWXSkJbp_Lvm4O1Yie9wVXDXKU-1q7Y-6HgTmoew
@@ -22,3 +30,14 @@
 (四)Homework4:   
     1. 需求文件：功能、介面、效能...  
     2. 分析文件：切割 => 子系統 => 子子系統.....  
+
+(五)Homework5:   
+    1. 分析文件：程式流程圖、程式方塊圖。
+
+(六)Homework6:   
+    1. 分析文件：資料可視化。
+    2. Rulebase。
+
+(七)Homework_Final:   
+    1. 機器學習(knn、Decisiontree)。
+    2. 期末比賽。
