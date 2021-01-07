@@ -5,10 +5,11 @@
 指導老師：陳朝烈 教授
 
 組員名單：
-電子工程系4甲 0652001 江承修
-電子工程系4甲 0652013 蕭宇謙
-電子工程系4甲 0652068 潘名洲
+電子工程系4甲 0652001 江承修  
+電子工程系4甲 0652013 蕭宇謙  
+電子工程系4甲 0652068 潘名洲  
 
+------
 
 原始程式Git：  
     - https://github.com/LanKuDot/MLGame?fbclid=IwAR2TVx1-ZabCglfJ3fGrWXSkJbp_Lvm4O1Yie9wVXDXKU-1q7Y-6HgTmoew
