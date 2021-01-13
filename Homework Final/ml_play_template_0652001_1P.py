@@ -21,22 +21,26 @@ class MLPlay:
         """
         self.ball_served = False
         self.side = "1P"
-        self.ServePosition = random.randrange(20,180, 5) #亂數5的倍數, 隨機發球用, 板子亂數位置
+        # self.ServePosition = random.randrange(20,180, 5) #亂數5的倍數, 隨機發球用, 板子亂數位置
     def update(self, scene_info):
-        Mode = "KNN" #KNN or RULE
+        Mode = "KNN" #KNN or RULE or Dt
+        
+        #------------------------隨機發球------------------------
         '''
-        #------------------------隨機發球(測試用)------------------------
         #print("self.ball_served>>>> ", self.ball_served)
         if self.ball_served:
             pass
         else:
+            #print("self.ServePosition>>> ", self.ServePosition)
             PlatformX = scene_info["platform_1P"][0] + 20
+            #print("PlatformX>>> ", PlatformX)
             if PlatformX < self.ServePosition:
                 return "MOVE_RIGHT"
             if PlatformX > self.ServePosition:
                 return "MOVE_LEFT"
             if PlatformX == self.ServePosition:
                 self.Serve = random.randint(0,2)
+                #print("Serve>>> ", self.Serve)
                 if self.Serve == 1:
                     self.ball_served = True
                     return "SERVE_TO_RIGHT"
@@ -46,8 +50,51 @@ class MLPlay:
                 else:
                     self.ball_served = True
                     return "SERVE_TO_RIGHT"
-        #--------------------------------------------------------
         '''
+        #--------------------------------------------------------
+        #------------------------Decisiontree--------------------
+        if Mode == "Dt":
+            filename = "D:./csv/my_tree_1P_new.sav"
+            model = pickle.load(open(filename,'rb'))
+            if scene_info["status"] != "GAME_ALIVE":
+                return "RESET"
+
+            if not self.ball_served:
+                self.ball_served = True
+                return "SERVE_TO_LEFT"
+        
+            # 3. Start an endless loop
+            while True:
+                ball_speed = scene_info["ball_speed"]
+                BallCoordinate_Now = scene_info["ball"]
+                if ball_speed[1] > 0: #go to down
+                    if ball_speed[0] < 0: #go RD
+                        LRUP = 2
+                    else: #go LD
+                        LRUP = 1
+                else: #go to up
+                    if ball_speed[0] < 0: #go RU
+                        LRUP = 4
+                    else: #go LU
+                        LRUP = 3
+                        
+                inp_temp = [BallCoordinate_Now[0],BallCoordinate_Now[1],LRUP, \
+                                 (200 - BallCoordinate_Now[0])]
+
+                move = str(model.classify_test(inp_temp))
+                try:
+                    aid = move[1:3]
+                    aid = int(aid) *10
+                except:
+                    aid = move[1:2]
+                    aid = int(aid) *10
+                if(scene_info["platform_1P"][0] +20 > aid):
+                    return "MOVE_LEFT"
+                elif(scene_info["platform_1P"][0] +20 < aid):
+                    return "MOVE_RIGHT"
+                else:
+                    return "NONE"        
+        #--------------------------------------------------------
         #------------------------RULEBASE------------------------
         if Mode == "RULE":
             if scene_info["status"] == "GAME_2P_WIN": #移除失敗log檔, 以利學習
@@ -166,7 +213,7 @@ class MLPlay:
                             Average = (Max + Mid) / 2 
                             print('avg22-> ', Average)
                     #---------------------------------------------------------
-                    CSV_Read_1P.doWrite(Frame, BallCoordinate_Now[0], BallCoordinate_Now[1], m, ball_speed[0], ball_speed[1], PlatformX, PlatformY, PlatformX_2P, PlatformY_2P, BallUpAndDown_NUM, Dropt_point[0]) #可視化用, 蒐集特徵
+                    #CSV_Read_1P.doWrite(Frame, BallCoordinate_Now[0], BallCoordinate_Now[1], m, ball_speed[0], ball_speed[1], PlatformX, PlatformY, PlatformX_2P, PlatformY_2P, BallUpAndDown_NUM, Dropt_point[0]) #可視化用, 蒐集特徵
                     print('預測3個落點',Dropt_point_cut, Dropt_point_Forward_cut, Dropt_point_Reverse_cut)
                     print(BallUpAndDown, BallCoordinate_Now ,Dropt_point, ball_speed_Prediction, ball_speed, hitthefall_number, scene_info['frame'] )
                     
