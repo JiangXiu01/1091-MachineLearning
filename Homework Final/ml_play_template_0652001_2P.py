@@ -13,54 +13,46 @@ The template of the script for the machine learning process in game pingpong
 class MLPlay:
     def __init__(self, side):
         self.ball_served = False
-        self.side = "2P"      
+        self.side = "2P"
         self.ball_location = [0,0]
+
+        filename = "D:./csv/dicisiontree_2P.sav"
+        self.model_2P = pickle.load(open(filename,'rb'))
     def update(self, scene_info):
-        Mode = "RULE" #KNN or Dt
+        Mode = "RULE" #KNN or Dt or RULE
         if scene_info["status"] != "GAME_ALIVE":
             return "RESET"
 
         if not self.ball_served:
             self.ball_served = True
-            return "SERVE_TO_LEFT"        
+            return "SERVE_TO_LEFT"
         #------------------------Decisiontree--------------------
         if Mode == "Dt": #decisiontree
-            filename = "D:./csv/my_tree_2P_new.sav"
-            model_2P = pickle.load(open(filename,'rb'))
-
-            if self.side == "2P":  
-
+            if self.side == "2P":
                 while True:
                     ball_speed = scene_info["ball_speed"]
                     BallCoordinate_Now = scene_info["ball"]
-                
+
                     if scene_info["status"] == "GAME_1P_WIN" or \
                         scene_info["status"] == "GAME_2P_WIN":
                     # Some updating or reseting code here
-                    
+
                         continue
-                    if ball_speed[1] < 0:
-                        # go to up
-                        
-                        if ball_speed[0] < 0:
-                               #go LU
+                    if ball_speed[1] < 0: #球往上
+                        if ball_speed[0] < 0: #球往左上
                             LRUP = 1
-                        else:
+                        else: #球往右上
                             LRUP = 2
-                                #go RU
-                    else:
-                        #down
-                        if ball_speed[0] < 0:
-                               #go LD
+                    else: #球往下
+                        if ball_speed[0] < 0: #球往左下
                             LRUP = 3
-                        else:
+                        else: #球往右下
                             LRUP = 4
-                                #go RD       
-                    
+
                     inp_temp = [BallCoordinate_Now[0],BallCoordinate_Now[1],LRUP, \
                                      (195 - BallCoordinate_Now[0])]
-                    move = str(model_2P.classify_test(inp_temp))
-                    
+                    move = str(self.model_2P.classify_test(inp_temp))
+
                     try:
                         aid = move[1:3]
                         # print(aid)
@@ -69,8 +61,8 @@ class MLPlay:
                         aid = move[1:2]
                         aid = int(aid) *10
                     if(aid<50 and abs(scene_info["ball_speed"][1]) >= 21 ):
-                    
                         aid += 10
+
                     if(scene_info["platform_2P"][0] +20 > aid):
                         return "MOVE_LEFT"
                     elif(scene_info["platform_2P"][0] +20 < aid):
@@ -106,12 +98,12 @@ class MLPlay:
             PlatformX_1P = scene_info["platform_1P"][0] + 20
             PlatformY_1P = scene_info["platform_1P"][1] + 20
             PlatformX_2P = scene_info["platform_2P"][0] + 20
-            PlatformY_2P = scene_info["platform_2P"][1] + 20            
+            PlatformY_2P = scene_info["platform_2P"][1] + 20
             aid = 0
             if ball_speed[0] != 0:
                 m = ball_speed[1] / ball_speed[0]
                 aid = BallCoordinate_Now[0] + ((BallCoordinate_Now[1] - 80) / -m)
-            
+
                 if aid < 0:
                     aid = -aid
                 if aid > 195:
@@ -125,7 +117,7 @@ class MLPlay:
             inp_temp = np.array([PlatformX_2P, PlatformY_2P, BallCoordinate_Now[0], BallCoordinate_Now[1], ball_speed[0], ball_speed[1]])
 
             input = inp_temp[np.newaxis, :]
-               
+
             move = model.predict(input)
             print("input>>> ", move)
             if move < 0:
@@ -144,7 +136,7 @@ class MLPlay:
             BallUpAndDown = ''
             aid = 0
             m = 1
-            
+
             if BallCoordinate_Now[0] - BallCoordinate_Last[0] != 0:
                 m = ball_speed[1] / ball_speed[0]
                 aid = BallCoordinate_Now[0] + ((BallCoordinate_Now[1] - 80) / -m)
@@ -154,7 +146,7 @@ class MLPlay:
             elif aid > 200:
                 aid = aid - 200
                 aid = 200 - aid
-            
+
             if BallCoordinate_Now[1] - BallCoordinate_Last[1] > 0:
                 BallUpAndDown = 'Down'
             else:
@@ -170,10 +162,10 @@ class MLPlay:
 
             if BallUpAndDown == 'Up' and PlatformX > 100:
                 return "MOVE_LEFT"
-                
+
             if BallUpAndDown == 'Up' and PlatformX == 100:
                 return "NONE"
-        
+
     def reset(self):
         """
         Reset the status

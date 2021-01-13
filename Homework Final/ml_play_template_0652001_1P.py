@@ -7,6 +7,7 @@ import pickle
 import numpy as np
 import csv
 import random
+import sys
 """
 The template of the script for the machine learning process in game pingpong
 """
@@ -22,9 +23,17 @@ class MLPlay:
         self.ball_served = False
         self.side = "1P"
         # self.ServePosition = random.randrange(20,180, 5) #亂數5的倍數, 隨機發球用, 板子亂數位置
+
+        filename_knn = "D:./csv/1P的50總匯三明治.sav" #sav路徑
+        self.knnmodel = pickle.load(open(filename_knn, 'rb'))
+
+        filename_dt = "D:./csv/my_tree_1P_new.sav"
+        self.dtmodel = pickle.load(open(filename_dt,'rb'))
+        self.cmd_1P =  "NONE"
+        self.GameDifficult = sys.argv[6] #遊戲難度
+
     def update(self, scene_info):
-        Mode = "KNN" #KNN or RULE or Dt
-        
+        Mode = "KNDT" #KNN or RULE or Dt
         #------------------------隨機發球------------------------
         '''
         #print("self.ball_served>>>> ", self.ball_served)
@@ -52,6 +61,105 @@ class MLPlay:
                     return "SERVE_TO_RIGHT"
         '''
         #--------------------------------------------------------
+        if scene_info["status"] != "GAME_ALIVE":
+            return "RESET"
+
+        if not self.ball_served:
+            self.ball_served = True
+            return "SERVE_TO_LEFT"
+
+        if Mode == "KNDT": #Decisiontree + KNN
+            #難度切換控制 #SwitchValue => 判斷速度
+            if self.GameDifficult == "HARD":
+                SwitchValue = 14
+            if self.GameDifficult == "NORMAL":
+                SwitchValue = 17
+            if self.GameDifficult == "EASY":
+                SwitchValue = 15
+            if abs(scene_info["ball_speed"][1]) <= SwitchValue:
+                #print("st> DT", abs(scene_info["ball_speed"][1]))
+                while True:
+                    ball_speed = scene_info["ball_speed"]
+                    if scene_info["status"] == "GAME_1P_WIN" or \
+                        scene_info["status"] == "GAME_2P_WIN":
+                    # Some updating or reseting code here
+
+                        continue
+                    if ball_speed[1] > 0: #球往下
+                        # go to down
+                        if ball_speed[0] > 0: #球往右下
+                            LRUP = 2 #LRUP => 定義環境為4區塊, 分別為左上 右上 左下 右下
+                        else: #球往左下
+                            LRUP = 1
+                    else: #球往上
+                        if ball_speed[0] > 0: #球往右上
+                            LRUP = 4
+                        else: #球往左上
+                            LRUP = 3
+
+                    inp_temp = [scene_info["ball"][0],scene_info["ball"][1],LRUP, \
+                                     (200 - int(scene_info["ball"][0]))]
+
+                    move = str(self.dtmodel.classify_test(inp_temp))
+                    # print(move)
+                    try:
+                        aid = move[1:3]
+                        aid = int(aid) *10
+                    except:
+                        aid = move[1:2]
+                        aid = int(aid) *10
+                    # print("1P aid = {}".format(aid))
+
+                    if(scene_info["platform_1P"][0] +20 > aid):
+                        self.cmd_1P = "MOVE_LEFT"
+                        return self.cmd_1P
+                    elif(scene_info["platform_1P"][0] +20 < aid):
+                        self.cmd_1P = "MOVE_RIGHT"
+                        return self.cmd_1P
+                    else:
+                        self.cmd_1P = "NONE"
+                        return self.cmd_1P
+            if abs(scene_info["ball_speed"][1]) > SwitchValue:
+                #print("st> kn", abs(scene_info["ball_speed"][1]))
+                BallCoordinate_Now = scene_info["ball"] #球當前位置
+                ball_speed = scene_info["ball_speed"] #當前球速度
+                PlatformX_1P = scene_info["platform_1P"][0] + 20 #當前1P板子 X
+                PlatformY_1P = scene_info["platform_1P"][1] + 20 #當前1P板子 Y
+                PlatformX_2P = scene_info["platform_2P"][0] + 20 #當前2P板子 X
+                PlatformY_2P = scene_info["platform_2P"][1] + 20 #當前2P板子 Y
+                aid = 0 #用於計算落點值
+
+                if ball_speed[0] != 0: #防Bug用, 未發球時球會是0
+                    m = ball_speed[1] / ball_speed[0] #斜率
+                    aid = BallCoordinate_Now[0] + ((420 - BallCoordinate_Now[1]) / ball_speed[1] * ball_speed[0]) #計算球落點
+
+                    #判斷打到牆壁後
+                    if aid < 0:
+                        aid = -aid
+                    if aid > 195:
+                        if aid > 390:
+                            aid = aid -390
+                        else:
+                            aid = 195 - (aid - 195)
+
+                    #knn測試用, 擊球後讓值為100
+                    if ball_speed[1] < 0:
+                        aid = 100
+
+                input = [] #輸入給knn模型之陣列
+                inp_temp = np.array([PlatformX_1P, PlatformY_1P, BallCoordinate_Now[0], BallCoordinate_Now[1], ball_speed[0], ball_speed[1]]) #特徵: 1P板子X, 2P板子Y, 球當前X, 球當前Y, 球速X, 球速Y
+                input = inp_temp[np.newaxis, :] #增加維度
+                move = self.knnmodel.predict(input) #模型運算解果
+                #print("input>>> ", move)
+
+                if move < 0:
+                    return "MOVE_LEFT"
+                elif move > 0:
+                    return "MOVE_RIGHT"
+                else:
+                    return "None"
+
+
         #------------------------Decisiontree--------------------
         if Mode == "Dt":
             filename = "D:./csv/my_tree_1P_new.sav"
@@ -62,7 +170,7 @@ class MLPlay:
             if not self.ball_served:
                 self.ball_served = True
                 return "SERVE_TO_LEFT"
-        
+
             # 3. Start an endless loop
             while True:
                 ball_speed = scene_info["ball_speed"]
@@ -77,7 +185,7 @@ class MLPlay:
                         LRUP = 4
                     else: #go LU
                         LRUP = 3
-                        
+
                 inp_temp = [BallCoordinate_Now[0],BallCoordinate_Now[1],LRUP, \
                                  (200 - BallCoordinate_Now[0])]
 
@@ -93,7 +201,7 @@ class MLPlay:
                 elif(scene_info["platform_1P"][0] +20 < aid):
                     return "MOVE_RIGHT"
                 else:
-                    return "NONE"        
+                    return "NONE"
         #--------------------------------------------------------
         #------------------------RULEBASE------------------------
         if Mode == "RULE":
@@ -143,7 +251,7 @@ class MLPlay:
                     compensate_speedX = 0 #球速補償
                     Frame = scene_info['frame'] #當前frame
                     m = ball_speed[1] / ball_speed[0] #斜率
-                    
+
                     #判斷球為往上or落下
                     if ball_speed[1] > 0:
                         BallUpAndDown = 'Down'
@@ -187,11 +295,11 @@ class MLPlay:
                         ball_speed_Prediction[0] = (-ball_speed[0] - compensate_speedX) * Reverse
                         aid, hitthefall_number = DropPointCalculator.doDPC(Dropt_point, ball_speed_Prediction, platform)
                         Dropt_point_Reverse_cut = [aid ,415]
-                    
+
                     #-------------------------落點預測2-----------------------
                     #用於判斷對方即球前的三種擊球方式的落點位置
                         Max = max(Dropt_point_cut[0], Dropt_point_Forward_cut[0], Dropt_point_Reverse_cut[0])
-                        Min = min(Dropt_point_cut[0], Dropt_point_Forward_cut[0], Dropt_point_Reverse_cut[0]) 
+                        Min = min(Dropt_point_cut[0], Dropt_point_Forward_cut[0], Dropt_point_Reverse_cut[0])
                         if Max == Dropt_point_cut[0]:
                             if Min == Dropt_point_Forward_cut[0]:
                                 Mid = Dropt_point_Reverse_cut[0]
@@ -210,13 +318,13 @@ class MLPlay:
                         Average = (Max + Min) / 2
                         print('avg-> ', Average, Mid)
                         if abs((PlatformY - PlatformY_2P) / ball_speed[1]) < ((Max - Average) / 5):
-                            Average = (Max + Mid) / 2 
+                            Average = (Max + Mid) / 2
                             print('avg22-> ', Average)
                     #---------------------------------------------------------
                     #CSV_Read_1P.doWrite(Frame, BallCoordinate_Now[0], BallCoordinate_Now[1], m, ball_speed[0], ball_speed[1], PlatformX, PlatformY, PlatformX_2P, PlatformY_2P, BallUpAndDown_NUM, Dropt_point[0]) #可視化用, 蒐集特徵
                     print('預測3個落點',Dropt_point_cut, Dropt_point_Forward_cut, Dropt_point_Reverse_cut)
                     print(BallUpAndDown, BallCoordinate_Now ,Dropt_point, ball_speed_Prediction, ball_speed, hitthefall_number, scene_info['frame'] )
-                    
+
                     #-------------------------板子控制-----------------------
                     if PlatformX > aid and BallUpAndDown == 'Down':
                         return "MOVE_LEFT"
@@ -234,6 +342,7 @@ class MLPlay:
         if Mode == "KNN":
             filename = "D:/※NKFUST/00-學期科目資料/109 academic year/機器學習/MLGame-master/csv/1P的50總匯三明治.sav" #sav路徑
             model = pickle.load(open(filename, 'rb'))
+
             '''
             if scene_info["status"] == "GAME_2P_WIN": #移除失敗log檔, 以利學習
                 print('GAME_2P_WIN!!!')
@@ -255,7 +364,7 @@ class MLPlay:
             '''
             if scene_info["status"] != "GAME_ALIVE": #判斷球狀態
                 return "RESET"
-                
+
             if not self.ball_served:
                 self.Serve = random.randint(0,2) #亂數取0~2
                 #print("Serve>>> ", self.Serve)
@@ -274,13 +383,13 @@ class MLPlay:
                 PlatformX_1P = scene_info["platform_1P"][0] + 20 #當前1P板子 X
                 PlatformY_1P = scene_info["platform_1P"][1] + 20 #當前1P板子 Y
                 PlatformX_2P = scene_info["platform_2P"][0] + 20 #當前2P板子 X
-                PlatformY_2P = scene_info["platform_2P"][1] + 20 #當前2P板子 Y        
+                PlatformY_2P = scene_info["platform_2P"][1] + 20 #當前2P板子 Y
                 aid = 0 #用於計算落點值
-                
+
                 if ball_speed[0] != 0: #防Bug用, 未發球時球會是0
                     m = ball_speed[1] / ball_speed[0] #斜率
                     aid = BallCoordinate_Now[0] + ((420 - BallCoordinate_Now[1]) / ball_speed[1] * ball_speed[0]) #計算球落點
-                    
+
                     #判斷打到牆壁後
                     if aid < 0:
                         aid = -aid
@@ -289,7 +398,7 @@ class MLPlay:
                             aid = aid -390
                         else:
                             aid = 195 - (aid - 195)
-                            
+
                     #knn測試用, 擊球後讓值為100
                     if ball_speed[1] < 0:
                         aid = 100
@@ -299,7 +408,7 @@ class MLPlay:
                 input = inp_temp[np.newaxis, :] #增加維度
                 move = model.predict(input) #模型運算解果
                 #print("input>>> ", move)
-                
+
                 if move < 0:
                     return "MOVE_LEFT"
                 elif move > 0:
