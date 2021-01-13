@@ -6,7 +6,7 @@ from os import listdir
 from os.path import isfile, join
 import pickle
 import numpy as np 
-# Toy dataset.
+# Toy Loglistset.
 # Format: each row is an example.
 # The last column is the label.
 # The first two columns are features.
@@ -14,210 +14,207 @@ import numpy as np
 # Interesting note: I've written this so the 2nd and 5th examples
 # have the same features, but different labels - so we can see how the
 # tree handles this case.
+
+
 def loaddata(what):
-    dirpath = 'D:/高科大學校/機器學習/MlGame/MLGame-beta4.0/MLGame-beta4.0/games/pingpong/log'
+
+    #匯入log清單
+    dirpath = 'D:/高科大學校/機器學習/MLGame-master8.01/MLGame-master/games/pingpong/log'
+    files = listdir(dirpath)
+    Loglist = []
+
+    for f in files:
+        fullpath = join(dirpath, f)
+        loadFile = open(fullpath, "rb")
+        Loglist.append(pickle.load(loadFile))
+        loadFile.close()
+        
+    #匯入Log資料
+    Frame = []    
+    status = []
     BallPosition = []
-    PlatformPosition = []
+    Ballspeed = []
+    PlatformPosition_1P = []
+    PlatformPosition_2P = []
+
+    for i in range(0, len(Loglist)):
+        for j in range(0, len(Loglist[i]['ml_1P']['scene_info'])):
+            Frame.append(Loglist[i]['ml_1P']['scene_info'][j]['frame'])
+            status.append(Loglist[i]['ml_1P']['scene_info'][j]['status'])
+            BallPosition.append(Loglist[i]['ml_1P']['scene_info'][j]['ball'])
+            Ballspeed.append(Loglist[i]['ml_1P']['scene_info'][j]['ball_speed'])
+            PlatformPosition_1P.append(Loglist[i]['ml_1P']['scene_info'][j]['platform_1P'])
+            PlatformPosition_2P.append(Loglist[i]['ml_2P']['scene_info'][j]['platform_2P'])
+    print('Ballspeed長度',len(Ballspeed))    
+    print('log檔數量',len(Loglist))        
     #DL = 1 , DR = 2 , UL = 3 , UR = 4
     LRUP = []
-    last_ball_x = 0
-    last_ball_y = 0
-    files = listdir(dirpath)
-    log_number = 0
-    Frame = []
     ball_to_200 = 0
     ball_to_plat = []
     ballx = 0
     bally = 0  
-    for k in range(0,1):
-        for f in files:
-          fullpath = join(dirpath, f)
-          if isfile(fullpath):
-            with open(fullpath , "rb") as f1:
-                data_list1 = pickle.load(f1)
-            for i in range(0 , len(data_list1)):
-                Frame.append(data_list1[i].frame)
     next_x = np.array(np.zeros((len(Frame))))
     next_x = next_x - 1
-    if(what == '1P'):
-        for k in range(0,1):
-            for f in files:
-              log_number = log_number + 1
-              fullpath = join(dirpath, f)
-              if isfile(fullpath):
-                with open(fullpath , "rb") as f1:
-                    data_list1 = pickle.load(f1)
-                for i in range(0 , len(data_list1)):
-                    BallPosition.append(data_list1[i].ball)
-                    PlatformPosition.append(data_list1[i].platform_1P)
-                    if(last_ball_x - data_list1[i].ball[0] > 0):
-                        if(last_ball_y - data_list1[i].ball[1] > 0):
-                            #going up
-                            ball_to_200 = 200 - int(data_list1[i].ball[0])
-                            LRUP.append(np.array((3,ball_to_200)))
-                         #   LRUP.append(np.array((last_ball_x - data_list1[i].ball[0],(last_ball_y - data_list1[i].ball[1]))))
-                            qwe = len(LRUP)-1
-                            next_x[qwe] = 10
-                                
-                            #U.L
-        
-                        else:
-                            #going down
-                            ball_to_200 = 200 - int(data_list1[i].ball[0])
-                            LRUP.append(np.array((1,ball_to_200)))
-                          #  LRUP.append(np.array((last_ball_x - data_list1[i].ball[0],(last_ball_y - data_list1[i].ball[1]))))
-                            if(data_list1[i].ball[1] > data_list1[i].platform_1P[1]-40):
-                                ballx = data_list1[i].ball[0]
-                                bally = data_list1[i].ball[1]
-                                while(bally < data_list1[i].platform_1P[1]):
-                                    ballx -= 1
-                                    bally += 1
-                                if(ballx < 0):
-                                    ballx = np.abs(ballx)
-                                if(ballx >= 170):
-                                    ballx = np.round(ballx/10) +1
-                                elif(ballx <= 30):
-                                    ballx = np.round(ballx/10) -1
-                                else:
-                                    ballx = np.round(ballx/10)
-                                qwe = len(LRUP)-1
-                                while(next_x[qwe] == -1 and qwe >= 0):
-                                    next_x[qwe] = ballx
-                                    qwe -= 1
-                            #DL
-        
+    
+    if(what == '1P'):#load1P
+        for i in range(0, len(Loglist)):
+            for j in range(0, len(Loglist[i]['ml_1P']['scene_info'])):
+                print(i,j)
+                if(Loglist[i]['ml_1P']['scene_info'][j]['ball_speed'][0] < 0):#向左
+                    if(Loglist[i]['ml_1P']['scene_info'][j]['ball_speed'][1] < 0):#向上
+                        #going up
+                        ball_to_200 = 200 - int(Loglist[i]['ml_1P']['scene_info'][j]['ball'][0])
+                        LRUP.append(np.array((3,ball_to_200)))
+                     #   LRUP.append(np.array((Ballspeed - Loglist[i].ball[0],(Ballspeed - Loglist[i].ball[1]))))
+                        qwe = len(LRUP)-1
+                        next_x[qwe] = 10
+                            
+                        #U.L
+
                     else:
-                        if(last_ball_y - data_list1[i].ball[1] > 0):
-                            #going up
-                            ball_to_200 = 200 - int(data_list1[i].ball[0])
-                            LRUP.append(np.array((4,ball_to_200)))
-                            #LRUP.append(np.array((last_ball_x - data_list1[i].ball[0],(last_ball_y - data_list1[i].ball[1]))))
+                        #going down
+                        ball_to_200 = 200 - int(Loglist[i]['ml_1P']['scene_info'][j]['ball'][0])
+                        LRUP.append(np.array((1,ball_to_200)))
+                      #  LRUP.append(np.array((Ballspeed - Loglist[i].ball[0],(Ballspeed - Loglist[i].ball[1]))))
+                        if(Loglist[i]['ml_1P']['scene_info'][j]['ball'][1] > Loglist[i]['ml_1P']['scene_info'][j]['platform_1P'][1] - 40):
+                            ballx = Loglist[i]['ml_1P']['scene_info'][j]['ball'][0]
+                            bally = Loglist[i]['ml_1P']['scene_info'][j]['ball'][1]
+                            while(bally < Loglist[i]['ml_1P']['scene_info'][j]['platform_1P'][1]):
+                                ballx -= 1
+                                bally += 1
+                            if(ballx < 0):
+                                ballx = np.abs(ballx)
+                            if(ballx >= 170):
+                                ballx = np.round(ballx/10) +1
+                            elif(ballx <= 30):
+                                ballx = np.round(ballx/10) -1
+                            else:
+                                ballx = np.round(ballx/10)
                             qwe = len(LRUP)-1
-                            next_x[qwe] = 10
-                            #U.R
-        
-                        else:
-                            #going down
-                            ball_to_200 = 200 - int(data_list1[i].ball[0])
-                            LRUP.append(np.array((2,ball_to_200)))
-                            #LRUP.append(np.array((last_ball_x - data_list1[i].ball[0],(last_ball_y - data_list1[i].ball[1]))))
-                            if(data_list1[i].ball[1] > data_list1[i].platform_1P[1]-40):
-                                ballx = data_list1[i].ball[0]
-                                bally = data_list1[i].ball[1]
-                                while(bally < data_list1[i].platform_1P[1]):
-                                    ballx += 1
-                                    bally += 1
-                                if(ballx > 200):
-                                    ballx = 400 - ballx
-                                if(ballx >= 170):
-                                    ballx = np.round(ballx/10) +1
-                                elif(ballx <= 30):
-                                    ballx = np.round(ballx/10) -1
-                                else:
-                                    ballx = np.round(ballx/10)
-                                qwe = len(LRUP)-1
-                                while(next_x[qwe] == -1 and qwe >= 0):
-                                    next_x[qwe] = ballx
-                                    qwe -= 1
-                            #D.R.
-        
-                    last_ball_x = data_list1[i].ball[0]
-                    last_ball_y = data_list1[i].ball[1]
+                            while(next_x[qwe] == -1 and qwe >= 0):
+                                next_x[qwe] = ballx
+                                qwe -= 1
+                        #DL
+
+                else:
+                    if(Loglist[i]['ml_1P']['scene_info'][j]['ball_speed'][1] < 0):
+                        #going up
+                        ball_to_200 = 200 - int(Loglist[i]['ml_1P']['scene_info'][j]['ball'][0])
+                        LRUP.append(np.array((4,ball_to_200)))
+                        #LRUP.append(np.array((Ballspeed - Loglist[i].ball[0],(Ballspeed - Loglist[i].ball[1]))))
+                        qwe = len(LRUP)-1
+                        next_x[qwe] = 10
+                        #U.R
+
+                    else:
+                        #going down
+                        ball_to_200 = 200 - int(Loglist[i]['ml_1P']['scene_info'][j]['ball'][0])
+                        LRUP.append(np.array((2,ball_to_200)))
+                        #LRUP.append(np.array((Ballspeed - Loglist[i].ball[0],(Ballspeed - Loglist[i].ball[1]))))
+                        if(Loglist[i]['ml_1P']['scene_info'][j]['ball'][1] > Loglist[i]['ml_1P']['scene_info'][j]['platform_1P'][1]-40):
+                            ballx = Loglist[i]['ml_1P']['scene_info'][j]['ball'][0]
+                            bally = Loglist[i]['ml_1P']['scene_info'][j]['ball'][1]
+                            while(bally < Loglist[i]['ml_1P']['scene_info'][j]['platform_1P'][1]):
+                                ballx += 1
+                                bally += 1
+                            if(ballx > 200):
+                                ballx = 400 - ballx
+                            if(ballx >= 170):
+                                ballx = np.round(ballx/10) +1
+                            elif(ballx <= 30):
+                                ballx = np.round(ballx/10) -1
+                            else:
+                                ballx = np.round(ballx/10)
+                            qwe = len(LRUP)-1
+                            while(next_x[qwe] == -1 and qwe >= 0):
+                                next_x[qwe] = ballx
+                                qwe -= 1
+                        #D.R.
     
     
     else:
         #load 2P
-        for k in range(0,1):
-            for f in files:
-              log_number = log_number + 1
-              fullpath = join(dirpath, f)
-              if isfile(fullpath):
-                with open(fullpath , "rb") as f1:
-                    data_list1 = pickle.load(f1)
-                for i in range(0 , len(data_list1)):
-                    BallPosition.append(data_list1[i].ball)
-                    PlatformPosition.append(data_list1[i].platform_2P)
-                    if(last_ball_x - data_list1[i].ball[0] > 0):
-                        if(last_ball_y - data_list1[i].ball[1] < 0):
+        for i in range(0, len(Loglist)):
+            for j in range(0, len(Loglist[i]['ml_1P']['scene_info'])):
+                print(i,j)
+                if(Loglist[i]['ml_1P']['scene_info'][j]['ball_speed'][0] < 0):#向左
+                    if(Loglist[i]['ml_1P']['scene_info'][j]['ball_speed'][1] < 0):#向上
                             #going down
-                            ball_to_200 = 200 - int(data_list1[i].ball[0])
+                            ball_to_200 = 200 - int(Loglist[i]['ml_1P']['scene_info'][j]['ball'][0])
                             LRUP.append(np.array((3,ball_to_200)))
-                         #   LRUP.append(np.array((last_ball_x - data_list1[i].ball[0],(last_ball_y - data_list1[i].ball[1]))))
+                         #   LRUP.append(np.array((Ballspeed - Loglist[i].ball[0],(Ballspeed - Loglist[i].ball[1]))))
                             qwe = len(LRUP)-1
                             next_x[qwe] = 10
                                 
                             #D.L
         
-                        else:
-                            #going up
-                            ball_to_200 = 200 - int(data_list1[i].ball[0])
-                            LRUP.append(np.array((1,ball_to_200)))
-                          #  LRUP.append(np.array((last_ball_x - data_list1[i].ball[0],(last_ball_y - data_list1[i].ball[1]))))
-                            if(data_list1[i].ball[1] < 120):
-                                ballx = data_list1[i].ball[0]
-                                bally = data_list1[i].ball[1]
-                                while(bally > 80):
-                                    ballx -= 1
-                                    bally -= 1
-                                if(ballx < 0):
-                                    ballx = np.abs(ballx)
-                                if(ballx >= 170):
-                                    ballx = np.round(ballx/10) +1 
-                                elif(ballx <= 30):
-                                    ballx = np.round(ballx/10) -1
-                                else:
-                                    ballx = np.round(ballx/10)
-                                qwe = len(LRUP)-1
-                                if(np.abs(ballx*10 - (data_list1[i].platform_2P[0] + 20)) <= 25):
-                                    ballx = ballx
-                                else:
-                                    ballx = np.round((data_list1[i].platform_2P[0] + 20)/10)
-                                while(next_x[qwe] == -1 and qwe >= 0):
-                                    next_x[qwe] = ballx
-                                    qwe -= 1
-                            #UL
-        
                     else:
-                        if(last_ball_y - data_list1[i].ball[1] < 0):
-                            #going down
-                            ball_to_200 = 200 - int(data_list1[i].ball[0])
-                            LRUP.append(np.array((4,ball_to_200)))
-                            #LRUP.append(np.array((last_ball_x - data_list1[i].ball[0],(last_ball_y - data_list1[i].ball[1]))))
+                        #going up
+                        ball_to_200 = 200 - int(Loglist[i]['ml_1P']['scene_info'][j]['ball'][0])
+                        LRUP.append(np.array((1,ball_to_200)))
+                      #  LRUP.append(np.array((Ballspeed - Loglist[i].ball[0],(Ballspeed - Loglist[i].ball[1]))))
+                        if(Loglist[i]['ml_1P']['scene_info'][j]['ball'][1] < 120):
+                            ballx = Loglist[i]['ml_1P']['scene_info'][j]['ball'][0]
+                            bally = Loglist[i]['ml_1P']['scene_info'][j]['ball'][1]
+                            while(bally > 80):
+                                ballx -= 1
+                                bally -= 1
+                            if(ballx < 0):
+                                ballx = np.abs(ballx)
+                            if(ballx >= 170):
+                                ballx = np.round(ballx/10) +1 
+                            elif(ballx <= 30):
+                                ballx = np.round(ballx/10) -1
+                            else:
+                                ballx = np.round(ballx/10)
                             qwe = len(LRUP)-1
-                            next_x[qwe] = 10
-                            #D.R
-        
-                        else:
-                            #going up
-                            ball_to_200 = 200 - int(data_list1[i].ball[0])
-                            LRUP.append(np.array((2,ball_to_200)))
-                            #LRUP.append(np.array((last_ball_x - data_list1[i].ball[0],(last_ball_y - data_list1[i].ball[1]))))
-                            if(data_list1[i].ball[1] < 120):
-                                ballx = data_list1[i].ball[0]
-                                bally = data_list1[i].ball[1]
-                                while(bally > 80):
-                                    ballx += 1
-                                    bally -= 1
-                                if(ballx > 200):
-                                    ballx = 400 - ballx
-                                if(ballx >= 170):
-                                    ballx = np.round(ballx/10) +1
-                                elif(ballx <= 30):
-                                    ballx = np.round(ballx/10) -1
-                                else:
-                                    ballx = np.round(ballx/10)
-                                qwe = len(LRUP)-1
-                                if(np.abs(ballx*10 - (data_list1[i].platform_2P[0] + 20)) <= 25):
-                                    ballx = ballx
-                                else:
-                                    ballx = np.round((data_list1[i].platform_2P[0] + 20)/10)
-                                while(next_x[qwe] == -1 and qwe >= 0):
-                                    next_x[qwe] = ballx
-                                    qwe -= 1
-                            #U.R.
-        
-                    last_ball_x = data_list1[i].ball[0]
-                    last_ball_y = data_list1[i].ball[1]
+                            if(np.abs(ballx*10 - (Loglist[i]['ml_1P']['scene_info'][j]['platform_2P'][0] + 20)) <= 25):
+                                ballx = ballx
+                            else:
+                                ballx = np.round((Loglist[i]['ml_1P']['scene_info'][j]['platform_2P'][0] + 20)/10)
+                            while(next_x[qwe] == -1 and qwe >= 0):
+                                next_x[qwe] = ballx
+                                qwe -= 1
+                        #UL
+    
+                else:
+                    if(Loglist[i]['ml_1P']['scene_info'][j]['ball'][1] > 0):
+                        #going down
+                        ball_to_200 = 200 - int(Loglist[i]['ml_1P']['scene_info'][j]['ball'][0])
+                        LRUP.append(np.array((4,ball_to_200)))
+                        #LRUP.append(np.array((Ballspeed - Loglist[i].ball[0],(Ballspeed - Loglist[i].ball[1]))))
+                        qwe = len(LRUP)-1
+                        next_x[qwe] = 10
+                        #D.R
+    
+                    else:
+                        #going up
+                        ball_to_200 = 200 - int(Loglist[i]['ml_1P']['scene_info'][j]['ball'][0])
+                        LRUP.append(np.array((2,ball_to_200)))
+                        #LRUP.append(np.array((Ballspeed - Loglist[i].ball[0],(Ballspeed - Loglist[i].ball[1]))))
+                        if(Loglist[i]['ml_1P']['scene_info'][j]['ball'][1] < 120):
+                            ballx = Loglist[i]['ml_1P']['scene_info'][j]['ball'][0]
+                            bally = Loglist[i]['ml_1P']['scene_info'][j]['ball'][1]
+                            while(bally > 80):
+                                ballx += 1
+                                bally -= 1
+                            if(ballx > 200):
+                                ballx = 400 - ballx
+                            if(ballx >= 170):
+                                ballx = np.round(ballx/10) +1
+                            elif(ballx <= 30):
+                                ballx = np.round(ballx/10) -1
+                            else:
+                                ballx = np.round(ballx/10)
+                            qwe = len(LRUP)-1
+                            if(np.abs(ballx*10 - (Loglist[i]['ml_1P']['scene_info'][j]['platform_2P'][0] + 20)) <= 25):
+                                ballx = ballx
+                            else:
+                                ballx = np.round((Loglist[i]['ml_1P']['scene_info'][j]['platform_2P'][0] + 20)/10)
+                            while(next_x[qwe] == -1 and qwe >= 0):
+                                next_x[qwe] = ballx
+                                qwe -= 1
+                        #U.R.
     
     ball_to_plat =  np.array(ball_to_plat[:-1])
     Ballarray = np.array(BallPosition[:-1])
@@ -227,7 +224,7 @@ def loaddata(what):
     from sklearn.model_selection import train_test_split
     x_train,x_test,y_train,y_test = train_test_split(x,y,test_size = 0.1,random_state = 41)
     training_data = np.hstack((x_train,y_train[:,np.newaxis]))
-    testing_data = np.hstack((x_test,y_test[:,np.newaxis]))
+    testing_Loglist = np.hstack((x_test,y_test[:,np.newaxis]))
     for i in range(0,10):
         print(training_data[i*15])
     return training_data
@@ -237,18 +234,18 @@ def loaddata(what):
 
 # Column labels.
 # These are used only to print the tree.
-header = ["ball_x", "ball_y", "LRUP", "ballto200", "next_x"]
+# header = ["ball_x", "ball_y", "LRUP", "ballto200", "next_x"]
 
 def unique_vals(rows, col):
-    """Find the unique values for a column in a dataset."""
+    """Find the unique values for a column in a Loglistset."""
     return set([row[col] for row in rows])
 
 
 def class_counts(rows):
-    """Counts the number of each type of example in a dataset."""
+    """Counts the number of each type of example in a Loglistset."""
     counts = {}  # a dictionary of label -> count.
     for row in rows:
-        # in our dataset format, the label is always the last column
+        # in our Loglistset format, the label is always the last column
         label = row[-1]
         if label not in counts:
             counts[label] = 0
@@ -263,7 +260,7 @@ def is_numeric(value):
 
 
 class Question:
-    """A Question is used to partition a dataset.
+    """A Question is used to partition a Loglistset.
 
     This class just records a 'column number' (e.g., 0 for Color) and a
     'column value' (e.g., Green). The 'match' method is used to compare
@@ -296,9 +293,9 @@ class Question:
 
 
 def partition(rows, question):
-    """Partitions a dataset.
+    """Partitions a Loglistset.
 
-    For each row in the dataset, check if it matches the question. If
+    For each row in the Loglistset, check if it matches the question. If
     so, add it to 'true rows', otherwise, add it to 'false rows'.
     """
     true_rows, false_rows = [], []
@@ -349,11 +346,11 @@ def find_best_split(rows):
 
             question = Question(col, val)
 
-            # try splitting the dataset
+            # try splitting the Loglistset
             true_rows, false_rows = partition(rows, question)
 
             # Skip this split if it doesn't divide the
-            # dataset.
+            # Loglistset.
             if len(true_rows) == 0 or len(false_rows) == 0:
                 continue
 
@@ -362,7 +359,7 @@ def find_best_split(rows):
 
             # You actually can use '>' instead of '>=' here
             # but I wanted the tree to look a certain way for our
-            # toy dataset.
+            # toy Loglistset.
             if gain >= best_gain:
                 best_gain, best_question = gain, question
 
@@ -371,10 +368,10 @@ def find_best_split(rows):
 
 
 class Leaf:
-    """A Leaf node classifies data.
+    """A Leaf node classifies Loglist.
 
     This holds a dictionary of class (e.g., "Apple") -> number of times
-    it appears in the rows from the training data that reach this leaf.
+    it appears in the rows from the training Loglist that reach this leaf.
     """
 
     def __init__(self, rows):
@@ -416,7 +413,7 @@ def build_tree(rows):
     giant stack traces.
     """
 
-    # Try partitioing the dataset on each of the unique attribute,
+    # Try partitioing the Loglistset on each of the unique attribute,
     # calculate the information gain,
     # and return the question that produces the highest gain.
     gain, question = find_best_split(rows)
@@ -512,11 +509,11 @@ def print_leaf(counts):
 
 
 if __name__ == "__main__":
-    what = '1P'
+    what = '2P'
     if(what == '1P'):
         my_tree = build_tree(loaddata('1P'))   
-        filename = "my_tree_1P_new.sav"
+        filename = "my_tree_beta801_1P_new.sav"
     else:
         my_tree = build_tree(loaddata('2P'))   
-        filename = "my_tree_2P_new.sav"
+        filename = "my_tree_beta801_2P_new.sav"
     pickle.dump(my_tree,open(filename,"wb"))
